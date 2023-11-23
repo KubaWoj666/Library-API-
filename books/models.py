@@ -1,4 +1,5 @@
 from django.db import models
+from django.core.validators import MinLengthValidator
 
 
 class Author(models.Model):
@@ -18,7 +19,7 @@ class Book(models.Model):
     title = models.CharField(max_length=120)
     description = models.TextField(blank=True, null=True)
     published = models.DateField(blank=True, null=True)
-    ISBN = models.CharField(max_length=13, unique=True)
+    ISBN = models.CharField(validators=[MinLengthValidator(13)], max_length=13, unique=True)
 
     def __str__(self):
         return self.title
