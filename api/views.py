@@ -1,7 +1,12 @@
 from rest_framework import generics
+from rest_framework.exceptions import ValidationError
+from rest_framework.generics import get_object_or_404
 
-from books.models import Author, Book
-from .serializer import AuthorSerializer, AuthorCreateSerializer, AuthorDetailSerializer, BookSerializer, BookDetailSerializer, BookCreateSerializer
+
+from books.models import Author, Book, Review
+from .serializer import (AuthorSerializer, AuthorCreateSerializer, AuthorDetailSerializer, 
+                        BookSerializer, BookDetailSerializer, BookCreateSerializer,
+                        ReviewSerializer)
 
 
 
@@ -34,3 +39,24 @@ class BookListCreateAPIView(generics.ListCreateAPIView):
 class BookDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Book.objects.all()
     serializer_class = BookDetailSerializer
+
+
+
+class ReviewCreateAPIView(generics.CreateAPIView):
+    queryset = Review.objects.all()
+    serializer_class = ReviewSerializer
+
+    def perform_create(self, serializer):
+        book_id = self.kwargs.get("pk")
+
+        book_obj = get_object_or_404(Book, id=book_id)
+
+        owner = serializer.validated_data.get("owner")
+
+        if Review.objects.filter(book=book_obj, owner=owner).exists():
+            raise ValidationError("You have already review this book")
+        
+        serializer.save(book=book_obj, owner=owner)
+
+        return super().perform_create(serializer)
+

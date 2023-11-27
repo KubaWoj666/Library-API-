@@ -1,11 +1,26 @@
+from django.urls import reverse
+from django.db.models import Avg
 from rest_framework import serializers
 
-from books.models import Author, Book
+from books.models import Author, Book, Review
 
 
 
+
+
+
+""" REVIEW SERIALIZERS"""
+
+class ReviewSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Review
+        fields = ["owner", "body", "rating"]
+
+
+
+""" AUTHOR SERIALIZERS """
 class AuthorSerializer(serializers.ModelSerializer):
-    details = serializers.HyperlinkedIdentityField(view_name="author-detail", lookup_field="pk")
+    details = serializers.HyperlinkedIdentityField(view_name="author-detail", lookup_field="pk", )
     class Meta:
         model = Author
         fields = ["name", "last_name", "details"]
@@ -29,12 +44,33 @@ class AuthorDetailSerializer(serializers.ModelSerializer):
 class BookSerializer(serializers.ModelSerializer):
     book_author = serializers.SerializerMethodField(read_only=True)
     detail = serializers.HyperlinkedIdentityField(view_name="book-detail", lookup_field="pk")
+    add_review = serializers.HyperlinkedIdentityField(view_name="review-create", lookup_field="pk")
+    average_rating = serializers.SerializerMethodField()
+    review_quantity = serializers.SerializerMethodField()
+
     class Meta:
         model = Book
-        fields = ["title", "book_author", "detail"]
+        fields = ["title", "book_author", "detail", "add_review", "average_rating", "review_quantity"]
 
     def get_book_author(self, obj):
         return f"{obj.author.name} {obj.author.last_name}"
+    
+    def get_average_rating(self, obj):
+        review = Review.objects.filter(book=obj)
+        avg = review.aggregate(Avg("rating", default=0)) 
+        return avg["rating__avg"]
+    
+    def get_review_quantity(self, obj):
+        review_count = Review.objects.filter(book=obj).count()
+        return review_count
+
+    
+    # def get_add_review(self, obj):
+    #     book_id = obj.pk
+
+    #     url = reverse("review-create", kwargs={"book_id":book_id})
+    #     return url
+
     
 
 class BookCreateSerializer(serializers.ModelSerializer):
@@ -45,6 +81,7 @@ class BookCreateSerializer(serializers.ModelSerializer):
 
 class BookDetailSerializer(serializers.ModelSerializer):
     author = AuthorSerializer()
+    reviews = ReviewSerializer(many=True, read_only=True)
     class Meta:
         model = Book
         fields = "__all__"

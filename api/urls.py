@@ -6,7 +6,9 @@ urlpatterns = [
     path("authors/<int:pk>/", views.AuthorDetailAPIView.as_view(), name="author-detail"),
 
     path("books/", views.BookListCreateAPIView.as_view(), name="books-list"),
-    path("books/<int:pk>/", views.BookDetailAPIView.as_view(), name="book-detail")
+    path("books/<int:pk>/", views.BookDetailAPIView.as_view(), name="book-detail"),
+
+    path("book/<int:pk>/review", views.ReviewCreateAPIView.as_view(), name="review-create")
 
 
 ]
