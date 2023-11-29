@@ -50,7 +50,7 @@ class BookSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Book
-        fields = ["title", "book_author", "detail", "add_review", "average_rating", "review_quantity"]
+        fields = ["id", "title", "book_author", "detail", "add_review", "average_rating", "review_quantity"]
 
     def get_book_author(self, obj):
         return f"{obj.author.name} {obj.author.last_name}"
@@ -63,14 +63,6 @@ class BookSerializer(serializers.ModelSerializer):
     def get_review_quantity(self, obj):
         review_count = Review.objects.filter(book=obj).count()
         return review_count
-
-    
-    # def get_add_review(self, obj):
-    #     book_id = obj.pk
-
-    #     url = reverse("review-create", kwargs={"book_id":book_id})
-    #     return url
-
     
 
 class BookCreateSerializer(serializers.ModelSerializer):
