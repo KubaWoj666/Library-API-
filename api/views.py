@@ -2,13 +2,18 @@ from rest_framework import generics, status
 from rest_framework.response import Response
 from rest_framework.exceptions import ValidationError
 from rest_framework.generics import get_object_or_404
-
+from rest_framework.permissions import IsAuthenticated, AllowAny
 
 from books.models import Author, Book, Review
+from accounts.models import User
+
 from .pagination import ReviewPagination
 from .serializer import (AuthorSerializer, AuthorCreateSerializer, AuthorDetailSerializer, 
                         BookSerializer, BookDetailSerializer, BookCreateSerializer,
-                        ReviewSerializer)
+                        ReviewSerializer,
+                        MyTokenObtainPairSerializer, RegisterUserSerializer, ChangePasswordSerializer)
+
+from rest_framework_simplejwt.views import TokenObtainPairView
 
 
 
@@ -30,6 +35,7 @@ class AuthorDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
 class BookListCreateAPIView(generics.ListCreateAPIView):
     queryset = Book.objects.all()
     serializer_class = BookSerializer
+    permission_classes = [IsAuthenticated]
 
     def get_serializer_class(self):
         if self.request.method == "GET":
@@ -49,20 +55,21 @@ class ReviewCreateAPIView(generics.CreateAPIView):
 
     def perform_create(self, serializer):
         book_id = self.kwargs.get("pk")
+        user = self.request.user
 
         book_obj = get_object_or_404(Book, id=book_id)
 
-        owner = serializer.validated_data.get("owner")
+        # owner = serializer.validated_data.get("owner")
 
-        if Review.objects.filter(book=book_obj, owner=owner).exists():
+        if Review.objects.filter(book=book_obj, owner=user).exists():
             raise ValidationError("You have already review this book")
         
-        serializer.save(book=book_obj, owner=owner)
+        serializer.save(book=book_obj, owner=user)
 
         return super().perform_create(serializer)
 
 
-class ReviewListForBook(generics.ListAPIView):
+class ReviewListForBookAPIView(generics.ListAPIView):
     queryset = Review.objects.all()
     serializer_class = ReviewSerializer
     pagination_class = ReviewPagination
@@ -124,3 +131,28 @@ class ReviewDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = ReviewSerializer
 
  
+
+"""ACCOUNTS VIEWS"""
+
+
+class MyObtainTokenPAir(TokenObtainPairView):
+    permission_classes = [AllowAny]
+    serializer_class = MyTokenObtainPairSerializer
+
+
+class RegisterUserAPIView(generics.CreateAPIView):
+    queryset = User.objects.all()
+    serializer_class = RegisterUserSerializer
+    permission_classes = [AllowAny]
+
+
+class ChangePasswordAPIView(generics.UpdateAPIView):
+    queryset = User.objects.all()
+    serializer_class = ChangePasswordSerializer
+    permission_classes = [IsAuthenticated]
+    lookup_field = "username"
+
+    def get_object(self):
+        if self.request.user.username == self.kwargs["username"]:
+            return get_object_or_404(User, username=self.kwargs["username"])
+        

@@ -1,6 +1,7 @@
 from typing import Any
 from django.db import models
 from django.core.validators import MinLengthValidator, MinValueValidator, MaxValueValidator
+from accounts.models import User
 
 
 class Author(models.Model):
@@ -39,7 +40,7 @@ class Book(models.Model):
     
 
 class Review(models.Model):
-    owner = models.CharField(max_length=50)
+    owner = models.ForeignKey(User, on_delete=models.CASCADE)
     book = models.ForeignKey(Book, on_delete=models.CASCADE, related_name="reviews")
     body = models.TextField(blank=True, null=True)
     rating = models.PositiveIntegerField(validators=[MinValueValidator(1), MaxValueValidator(5)], blank=True, null=True) 

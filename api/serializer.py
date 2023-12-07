@@ -1,8 +1,15 @@
 from django.urls import reverse
 from django.db.models import Avg
+from django.contrib.auth.password_validation import validate_password
+
 from rest_framework import serializers
+from rest_framework.validators import UniqueValidator
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from rest_framework_simplejwt.tokens import Token
 
 from books.models import Author, Book, Review
+from accounts.models import User
+
 
 
 
@@ -12,9 +19,12 @@ from books.models import Author, Book, Review
 """ REVIEW SERIALIZERS"""
 
 class ReviewSerializer(serializers.ModelSerializer):
+    owner = serializers.CharField(read_only=True)
     class Meta:
         model = Review
-        fields = ["owner", "body", "rating"]
+        fields = ["owner" ,"body", "rating"]
+
+    
 
 
 
@@ -102,3 +112,78 @@ class BookDetailSerializer(serializers.ModelSerializer):
 
 
 
+"""ACCOUNTS SERIALIZERS"""
+
+
+class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
+    @classmethod
+    def get_token(cls, user) -> Token:
+        token =  super(MyTokenObtainPairSerializer, cls).get_token(user)
+
+        token["username"] = user.username
+        token["email"] = user.email
+
+        return token
+
+
+class RegisterUserSerializer(serializers.ModelSerializer):
+    email = serializers.EmailField(required=True, validators=[UniqueValidator(queryset=User.objects.all())])
+    password = serializers.CharField(write_only=True, required=True, validators=[validate_password])
+    password2 = serializers.CharField(write_only=True, required=True)
+
+    class Meta:
+        model = User
+        fields = ['username', 'password', 'password2', 'email',]
+
+    def validate(self, attrs):
+        if attrs["password"] != attrs["password2"]:
+            raise serializers.ValidationError({"password": "Password fields didn't match!"})
+        return attrs
+
+    def create(self, validated_data):
+        user = User.objects.create(
+            username = validated_data.get("username"),
+            email = validated_data.get("email")
+        )
+
+        user.set_password(validated_data.get("password"))
+        user.save()
+
+        return user
+    
+
+
+class ChangePasswordSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(write_only=True, required=True, validators=[validate_password])
+    password2 = serializers.CharField(write_only=True, required=True)
+    old_password = serializers.CharField(write_only=True, required=True)
+
+    class Meta:
+        model = User
+        fields = ["old_password", "password", "password2"]
+        
+    def create(self, validated_data):
+        old_password = validated_data.pop("old_password")
+        obj =  super().create(validated_data)
+        print(old_password)
+        return obj
+
+    def validate(self, attrs):
+        if attrs["password"] != attrs["password2"]:
+            raise serializers.ValidationError({"password":"Password fields didn't match!"})
+        
+        return attrs
+    
+    def validate_old_password(self, value):
+        user = self.context["request"].user
+
+        if not user.check_password(value):
+            raise serializers.ValidationError({"old password": "Old password is not correct!"})
+        
+        return value
+    
+    def update(self, instance, validated_data): 
+        instance.set_password(validated_data.get("password"))
+        instance.save()
+
+        return instance
