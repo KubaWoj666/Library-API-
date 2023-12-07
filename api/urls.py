@@ -25,7 +25,7 @@ urlpatterns = [
 
     path("register/", views.RegisterUserAPIView.as_view(), name="register"),
     path("change-password/<str:username>/", views.ChangePasswordAPIView.as_view(), name="change-password")
-
+    
 
 ]
 

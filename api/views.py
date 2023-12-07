@@ -153,6 +153,14 @@ class ChangePasswordAPIView(generics.UpdateAPIView):
     lookup_field = "username"
 
     def get_object(self):
-        if self.request.user.username == self.kwargs["username"]:
-            return get_object_or_404(User, username=self.kwargs["username"])
-        
+        username = self.request.user.username
+        return get_object_or_404(User, username=username)
+    
+
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+
+        return Response({"detail" : "Password changed successfully "}, status=status.HTTP_200_OK)
