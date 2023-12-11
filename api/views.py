@@ -8,9 +8,10 @@ from books.models import Author, Book, Review
 from accounts.models import User
 
 from .pagination import ReviewPagination
+from .permissions import OwnerOrReadOnly
 from .serializer import (AuthorSerializer, AuthorCreateSerializer, AuthorDetailSerializer, 
                         BookSerializer, BookDetailSerializer, BookCreateSerializer,
-                        ReviewSerializer,
+                        ReviewSerializer, UserReviewsSerializer,
                         MyTokenObtainPairSerializer, RegisterUserSerializer, ChangePasswordSerializer, UpdateUserProfileSerializer, UserSerializer)
 
 from rest_framework_simplejwt.views import TokenObtainPairView
@@ -20,6 +21,7 @@ from rest_framework_simplejwt.views import TokenObtainPairView
 class AuthorListCreateAPIView(generics.ListCreateAPIView):
     queryset = Author.objects.all()
     serializer_class = AuthorSerializer
+    permission_classes = [IsAuthenticated]
 
     def get_serializer_class(self):
         if self.request.method == "GET":
@@ -30,7 +32,10 @@ class AuthorListCreateAPIView(generics.ListCreateAPIView):
 class AuthorDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Author.objects.all()
     serializer_class = AuthorDetailSerializer
+    permission_classes = [IsAuthenticated]
 
+
+"""BOOKS VIEWS"""
 
 class BookListCreateAPIView(generics.ListCreateAPIView):
     queryset = Book.objects.all()
@@ -47,19 +52,48 @@ class BookListCreateAPIView(generics.ListCreateAPIView):
 class BookDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Book.objects.all()
     serializer_class = BookDetailSerializer
+    permission_classes = [IsAuthenticated]
+    
+
+"""REVIEW VIEWS"""
+
+class UserReviewAPIView(generics.ListAPIView):
+    queryset = Review.objects.all()
+    serializer_class = UserReviewsSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        reviews = Review.objects.filter(owner=user) 
+        print(reviews.exists())
+        return reviews
+
+    def list(self, request, *args, **kwargs):
+        reviews = self.get_queryset()
+        reviews_count = reviews.count()
+        serializer = self.get_serializer(reviews, many=True)
+        if reviews.exists(): 
+            response = {
+                "reviews_count": reviews_count,
+                "data": serializer.data
+            }
+            return Response(data=response, status=status.HTTP_200_OK)
+        return Response({"detail": f"You dont howe any reviews {self.request.user.username}"}, status=status.HTTP_200_OK)
+    
+
+    
     
 
 class ReviewCreateAPIView(generics.CreateAPIView):
     queryset = Review.objects.all()
     serializer_class = ReviewSerializer
+    permission_classes = [IsAuthenticated]
 
     def perform_create(self, serializer):
         book_id = self.kwargs.get("pk")
         user = self.request.user
 
         book_obj = get_object_or_404(Book, id=book_id)
-
-        # owner = serializer.validated_data.get("owner")
 
         if Review.objects.filter(book=book_obj, owner=user).exists():
             raise ValidationError("You have already review this book")
@@ -72,6 +106,7 @@ class ReviewCreateAPIView(generics.CreateAPIView):
 class ReviewListForBookAPIView(generics.ListAPIView):
     queryset = Review.objects.all()
     serializer_class = ReviewSerializer
+    permission_classes = [IsAuthenticated]
     pagination_class = ReviewPagination
     
 
@@ -129,6 +164,7 @@ class ReviewListForBookAPIView(generics.ListAPIView):
 class ReviewDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Review.objects.all()
     serializer_class = ReviewSerializer
+    permission_classes = [IsAuthenticated, OwnerOrReadOnly]
 
  
 

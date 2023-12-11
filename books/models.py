@@ -23,12 +23,12 @@ class BookManager(models.Manager):
         isbn = f"{isbn[0:3]}-{isbn[3:5]}-{isbn[5:11]}-{isbn[11]}-{isbn[12]}"
         kwargs.pop("ISBN")
         return super().create(ISBN=isbn, **kwargs)
-
+        
 
 class Book(models.Model):
     author = models.ForeignKey(Author, on_delete=models.CASCADE, related_name="written_books")
     title = models.CharField(max_length=120)
-    # image = models.ImageField(upload_to="book_image", blank=True, null=True)
+    image = models.ImageField(upload_to="book_image", default="blank.jpeg", blank=True, null=True)
     description = models.TextField(blank=True, null=True)
     published = models.DateField(blank=True, null=True)
     ISBN = models.CharField(validators=[MinLengthValidator(13)], max_length=13, unique=True)

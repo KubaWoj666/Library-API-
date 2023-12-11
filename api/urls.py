@@ -15,6 +15,7 @@ urlpatterns = [
     path("books/", views.BookListCreateAPIView.as_view(), name="books-list"),
     path("books/<int:pk>/", views.BookDetailAPIView.as_view(), name="book-detail"),
 
+    path("user-reviews/", views.UserReviewAPIView.as_view(), name="user_review"),
     path("book/<int:pk>/review/", views.ReviewCreateAPIView.as_view(), name="review-create"),
     path('book/<int:pk>/all-reviews/', views.ReviewListForBookAPIView.as_view(), name='review-for-book'),
     path("review/<int:pk>/", views.ReviewDetailAPIView.as_view(), name="review-detail"),

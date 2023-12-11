@@ -24,13 +24,21 @@ class ReviewSerializer(serializers.ModelSerializer):
         model = Review
         fields = ["owner" ,"body", "rating"]
 
-    
+class UserReviewsSerializer(serializers.ModelSerializer):
+    update_review = serializers.HyperlinkedIdentityField(view_name="review-detail", lookup_field="pk")
+    book = serializers.SerializerMethodField()
+    class Meta:
+        model = Review
+        fields = ["book","body", "rating", "update_review"]
+
+    def get_book(self, obj):
+        return obj.book.title
 
 
 
 """ AUTHOR SERIALIZERS """
 class AuthorSerializer(serializers.ModelSerializer):
-    details = serializers.HyperlinkedIdentityField(view_name="author-detail", lookup_field="pk", )
+    details = serializers.HyperlinkedIdentityField(view_name="author-detail", lookup_field="pk")
     class Meta:
         model = Author
         fields = ["name", "last_name", "details"]
@@ -60,7 +68,7 @@ class BookSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Book
-        fields = ["id", "title", "book_author", "detail", "add_review", "average_rating", "review_quantity"]
+        fields = ["id", "title", "book_author", "image", "detail", "add_review", "average_rating", "review_quantity"]
 
     def get_book_author(self, obj):
         return f"{obj.author.name} {obj.author.last_name}"
@@ -106,6 +114,7 @@ class BookDetailSerializer(serializers.ModelSerializer):
         instance.description = validated_data.get('description', instance.description)
         instance.published = validated_data.get('published', instance.published)
         instance.ISBN = validated_data.get('ISBN', instance.ISBN)
+        instance.image = validated_data.get("image", instance.image)
         instance.save()
 
         return instance
