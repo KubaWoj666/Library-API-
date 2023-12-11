@@ -23,8 +23,11 @@ urlpatterns = [
     path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('token/verify/', TokenVerifyView.as_view(), name='token_verify'),
 
+    path("user-profile/<str:username>/", views.UserProfileAPIView.as_view(), name="user-profile"),
     path("register/", views.RegisterUserAPIView.as_view(), name="register"),
-    path("change-password/<str:username>/", views.ChangePasswordAPIView.as_view(), name="change-password")
+    path("change-password/<str:username>/", views.ChangePasswordAPIView.as_view(), name="change-password"),
+    path("update-profile/<str:username>/", views.UpdateProfileAPIView.as_view(), name="update-profile"),
+
     
 
 ]

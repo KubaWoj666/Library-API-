@@ -11,7 +11,7 @@ from .pagination import ReviewPagination
 from .serializer import (AuthorSerializer, AuthorCreateSerializer, AuthorDetailSerializer, 
                         BookSerializer, BookDetailSerializer, BookCreateSerializer,
                         ReviewSerializer,
-                        MyTokenObtainPairSerializer, RegisterUserSerializer, ChangePasswordSerializer)
+                        MyTokenObtainPairSerializer, RegisterUserSerializer, ChangePasswordSerializer, UpdateUserProfileSerializer, UserSerializer)
 
 from rest_framework_simplejwt.views import TokenObtainPairView
 
@@ -134,6 +134,23 @@ class ReviewDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
 
 """ACCOUNTS VIEWS"""
 
+class UserProfileAPIView(generics.RetrieveAPIView):
+    queryset = User.objects.all()
+    serializer_class = UserSerializer
+    permission_classes = [IsAuthenticated]
+    lookup_field = "username"
+
+    def get(self, request, *args, **kwargs):
+        instance = request.user
+        username = kwargs.get("username")
+        serializer = self.get_serializer(instance)
+
+        if instance.username != username:
+            return Response({"detail": "NOT ALLOWED"}, status=status.HTTP_403_FORBIDDEN)
+        
+        return Response(serializer.data)
+
+
 
 class MyObtainTokenPAir(TokenObtainPairView):
     permission_classes = [AllowAny]
@@ -158,9 +175,42 @@ class ChangePasswordAPIView(generics.UpdateAPIView):
     
 
     def update(self, request, *args, **kwargs):
+        username = kwargs.get("username")
         instance = self.get_object()
+        if instance.username != username:
+            return Response({"detail": "NOT ALLOWED"}, status=status.HTTP_403_FORBIDDEN)
+        
+        serializer = self.get_serializer(instance, data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+        return Response({"detail" : "Password changed successfully "}, status=status.HTTP_200_OK)
+    
+
+class UpdateProfileAPIView(generics.RetrieveUpdateAPIView):
+    queryset = User.objects.all()
+    serializer_class = UpdateUserProfileSerializer
+    permission_classes = [IsAuthenticated]
+    lookup_field = "username"
+
+
+    def get(self, request, *args, **kwargs):
+        instance = request.user
+        username = self.kwargs["username"]
+        serializer = self.get_serializer(instance)
+        if instance.username != username:
+            return Response({"detail": "NOT ALLOWED"}, status=status.HTTP_403_FORBIDDEN )
+        return Response(serializer.data)
+
+    
+    def update(self, request, *args, **kwargs): 
+        username = kwargs.get("username")
+        instance = request.user
+
+        if instance.username != username:
+            return Response({"detail": "NOT ALLOWED"}, status=status.HTTP_403_FORBIDDEN)
+        
         serializer = self.get_serializer(instance, data=request.data)
         serializer.is_valid(raise_exception=True)
         self.perform_update(serializer)
 
-        return Response({"detail" : "Password changed successfully "}, status=status.HTTP_200_OK)
+        return Response({"detail": "Data updated successfully.", "data": serializer.data}, status=status.HTTP_200_OK)

@@ -115,6 +115,20 @@ class BookDetailSerializer(serializers.ModelSerializer):
 """ACCOUNTS SERIALIZERS"""
 
 
+class UserSerializer(serializers.ModelSerializer):
+    update_profile = serializers.HyperlinkedIdentityField(view_name="update-profile", lookup_field="username")
+    change_password = serializers.HyperlinkedIdentityField(view_name="change-password", lookup_field="username")
+    reviews = serializers.SerializerMethodField()
+
+    class Meta:
+        model = User
+        fields = ["username", "email", "update_profile", "change_password", "reviews"]
+
+    def get_reviews(self, obj):
+        reviews = Review.objects.filter(owner=obj).count()
+        return reviews
+
+
 class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
     @classmethod
     def get_token(cls, user) -> Token:
@@ -150,70 +164,7 @@ class RegisterUserSerializer(serializers.ModelSerializer):
         user.save()
 
         return user
-    
-
-
-# class ChangePasswordSerializer(serializers.ModelSerializer):
-#     password = serializers.CharField(write_only=True, required=True, validators=[validate_password])
-#     password2 = serializers.CharField(write_only=True, required=True)
-#     old_password = serializers.CharField(write_only=True, required=True)
-
-#     class Meta:
-#         model = User
-#         fields = ["old_password", "password", "password2"]
-        
-#     # def create(self, validated_data):
-#     #     old_password = validated_data.pop("old_password")
-#     #     obj =  super().create(validated_data)
-#     #     print(old_password)
-#     #     return obj
-
-#     def validate(self, attrs):
-#         if attrs["password"] != attrs["password2"]:
-#             raise serializers.ValidationError({"password":"Password fields didn't match!"})
-        
-#         return attrs
-    
-#     def validate_old_password(self, value):
-#         user = self.context["request"].user
-
-#         if not user.check_password(value):
-#             raise serializers.ValidationError({"old password": "Old password is not correct!"})
-        
-#         return value
-    
-#     def update(self, instance, validated_data): 
-#         instance.set_password(validated_data.get("password"))
-#         instance.save()
-
-#         return instance
-
-from django.contrib.auth.hashers import check_password
-
-# class ChangePasswordSerializer(serializers.Serializer):
-#     old_password = serializers.CharField(write_only=True, required=True)
-#     password = serializers.CharField(write_only=True, required=True, validators=[validate_password])
-#     password2 = serializers.CharField(write_only=True, required=True)
-
-#     def validate_old_password(self, value):
-#         user = self.context["request"].user
-
-#         if not check_password(value, user.password):
-#             raise serializers.ValidationError({"old_password": "Old password is not correct!"})
-
-#         return value
-
-#     def validate(self, attrs):
-#         if attrs["password"] != attrs["password2"]:
-#             raise serializers.ValidationError({"password": "Password fields didn't match!"})
-
-#         return attrs
-
-#     def update(self, instance, validated_data): 
-#         instance.set_password(validated_data.get("password"))
-#         instance.save()
-
-#         return instance
+ 
 
 class ChangePasswordSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, required=True, validators=[validate_password])
@@ -223,9 +174,7 @@ class ChangePasswordSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ('old_password', 'password', 'password2')
-        lookup_field = "username"
-
-
+        
     def validate(self, attrs):
         if attrs['password'] != attrs['password2']:
             raise serializers.ValidationError({"password": "Password fields didn't match."})
@@ -244,3 +193,10 @@ class ChangePasswordSerializer(serializers.ModelSerializer):
         instance.save()
 
         return instance
+    
+
+
+class UpdateUserProfileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ["email", "username"]
