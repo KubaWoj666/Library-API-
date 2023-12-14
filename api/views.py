@@ -8,7 +8,7 @@ from books.models import Author, Book, Review
 from accounts.models import User
 
 from .pagination import ReviewPagination
-from .permissions import OwnerOrReadOnly
+from .permissions import OwnerOrReadOnly, AdminOrReadOnly
 from .serializer import (AuthorSerializer, AuthorCreateSerializer, AuthorDetailSerializer, 
                         BookSerializer, BookDetailSerializer, BookCreateSerializer,
                         ReviewSerializer, UserReviewsSerializer,
@@ -21,7 +21,8 @@ from rest_framework_simplejwt.views import TokenObtainPairView
 class AuthorListCreateAPIView(generics.ListCreateAPIView):
     queryset = Author.objects.all()
     serializer_class = AuthorSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, AdminOrReadOnly]
+    pagination_class = ReviewPagination
 
     def get_serializer_class(self):
         if self.request.method == "GET":
@@ -32,7 +33,7 @@ class AuthorListCreateAPIView(generics.ListCreateAPIView):
 class AuthorDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Author.objects.all()
     serializer_class = AuthorDetailSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, AdminOrReadOnly]
 
 
 """BOOKS VIEWS"""
@@ -40,7 +41,8 @@ class AuthorDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
 class BookListCreateAPIView(generics.ListCreateAPIView):
     queryset = Book.objects.all()
     serializer_class = BookSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, AdminOrReadOnly]
+    pagination_class = ReviewPagination
 
     def get_serializer_class(self):
         if self.request.method == "GET":
@@ -52,7 +54,7 @@ class BookListCreateAPIView(generics.ListCreateAPIView):
 class BookDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Book.objects.all()
     serializer_class = BookDetailSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, AdminOrReadOnly]
     
 
 """REVIEW VIEWS"""
@@ -61,27 +63,30 @@ class UserReviewAPIView(generics.ListAPIView):
     queryset = Review.objects.all()
     serializer_class = UserReviewsSerializer
     permission_classes = [IsAuthenticated]
+    pagination_class = ReviewPagination
 
     def get_queryset(self):
         user = self.request.user
         reviews = Review.objects.filter(owner=user) 
-        print(reviews.exists())
         return reviews
 
     def list(self, request, *args, **kwargs):
         reviews = self.get_queryset()
-        reviews_count = reviews.count()
-        serializer = self.get_serializer(reviews, many=True)
-        if reviews.exists(): 
-            response = {
-                "reviews_count": reviews_count,
-                "data": serializer.data
-            }
-            return Response(data=response, status=status.HTTP_200_OK)
-        return Response({"detail": f"You dont howe any reviews {self.request.user.username}"}, status=status.HTTP_200_OK)
-    
 
-    
+        paginated_reviews = self.paginate_queryset(reviews)
+        serializer = self.get_serializer(paginated_reviews, many=True)
+
+        if reviews.exists(): 
+            if paginated_reviews is not None:
+                response = {
+                    "count": self.paginator.page.paginator.count,
+                    "next": self.paginator.get_next_link(),
+                    "previous": self.paginator.get_previous_link(),
+                    "data": serializer.data
+                }
+                return Response(data=response, status=status.HTTP_200_OK)
+            return Response(data=serializer.data, status=status.HTTP_200_OK)
+        return Response({"detail": f"You dont howe any reviews {self.request.user.username}"}, status=status.HTTP_200_OK)
     
 
 class ReviewCreateAPIView(generics.CreateAPIView):

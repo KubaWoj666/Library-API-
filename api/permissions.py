@@ -6,3 +6,10 @@ class OwnerOrReadOnly(BasePermission):
         if request.method in SAFE_METHODS:
             return True 
         return request.user == obj.owner
+
+
+class AdminOrReadOnly(BasePermission):
+    def has_permission(self, request, view):
+        if request.method in SAFE_METHODS:
+            return True
+        return request.user.is_staff
