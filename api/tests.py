@@ -107,7 +107,7 @@ class AuthorApiViews(APITestCase):
         self.assertEqual(response.data["written_books"], ['Test Title'])
 
 
-    def test_author_by_update(self):
+    def test_author_by_admin_update(self):
         data={
             "name": "Update", 
             "last_name": "Update last name", 
@@ -161,7 +161,7 @@ class AuthorApiViews(APITestCase):
 class BooksApiViews(APITestCase):
     def setUp(self) -> None:
         self.book_list_url = reverse("books-list")
-        self.book_detail.url = reverse("book-detail", kwargs={"pk":1})
+        self.book_detail_url = reverse("book-detail", kwargs={"pk":1})
 
         self.superuser = User.objects.create_superuser(username="Superuser", email="super@email.com", password="testpassword")
 
@@ -187,6 +187,66 @@ class BooksApiViews(APITestCase):
         token = response.data["access"]
 
         self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
+
+
+    def test_book_list_get(self):
+        self.authenticate()
+
+        response = self.client.get(self.book_list_url)
+        # print(response.data)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["count"], 1)
+        self.assertEqual(response.data["results"][0]["title"], "Test Title")
+        self.assertEqual(response.data["results"][0]["book_author"], "Test Author")
+    
+    def test_book_list_get_unauthorize(self):
+
+        response = self.client.get(self.book_list_url)
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    
+    def test_book_list_create_by_admin(self):
+        data = {
+            "title": "Test Title",
+            "description": "Test description",
+            "published": date(2023, 12, 12),
+            "ISBN": "1234567890124",
+            "author": self.author.id
+        }
+
+        self.authenticate_admin()
+        response = self.client.post(self.book_list_url, data=data)
+
+        print(response.data)
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data["id"], 2)
+        self.assertEqual(response.data["title"], "Test Title")
+        self.assertEqual(response.data["description"], "Test description")
+        self.assertEqual(response.data["published"], "2023-12-12")
+        self.assertEqual(response.data["ISBN"], "123-45-678901-2-4")
+        self.assertEqual(response.data["author"], 1)
+
+
+    def test_book_list_create_by_user(self):
+        data = {
+            "title": "Test Title",
+            "description": "Test description",
+            "published": date(2023, 12, 12),
+            "ISBN": "1234567890124",
+            "author": self.author.id
+        }
+
+        self.authenticate()
+        response = self.client.post(self.book_list_url, data=data)
+
+        print(response.data)
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+    
+
 
 
 
