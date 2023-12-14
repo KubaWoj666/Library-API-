@@ -19,7 +19,7 @@ from rest_framework_simplejwt.views import TokenObtainPairView
 
 
 class AuthorListCreateAPIView(generics.ListCreateAPIView):
-    queryset = Author.objects.all()
+    queryset = Author.objects.all().order_by("id")
     serializer_class = AuthorSerializer
     permission_classes = [IsAuthenticated, AdminOrReadOnly]
     pagination_class = ReviewPagination
