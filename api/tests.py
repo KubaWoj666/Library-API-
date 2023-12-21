@@ -491,8 +491,67 @@ class ReviewsAPIViews(APITestCase):
 
 
 
+class AuthAPIView(APITestCase):
+    def setUp(self) -> None:
+        self.user = User.objects.create_user(username="Test", email="test@email.com", password="password")
+        self.user2 = User.objects.create_user(username="Test2", email="test2@email.com", password="password")
+
+    def authenticate_user(self):
+        response = self.client.post(reverse("jwt-create"), {"email":"test@email.com", "password": "password"})
+       
+        token = response.data["access"]
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
+
+    def authenticate_user2(self):
+        response = self.client.post(reverse("jwt-create",), {"email": "test2@email.com", "password": "password"})
+        token = response.data["access"]
+
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
+
+    def test_change_password(self):
+        self.authenticate_user()
+
+        data = {
+            "old_password" : "password",
+            "password": "testpassword1",
+            "password2": "testpassword1"
+        }
+
+        response = self.client.put(reverse("change-password",  kwargs={"username": "Test"}), data=data)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["detail"], "Password changed successfully ")
 
 
+    def test_change_password_by_different_user(self):
+        self.authenticate_user2()
+
+        data = {
+            "old_password" : "password",
+            "password": "testpassword1",
+            "password2": "testpassword1"
+        }
+
+        response = self.client.put(reverse("change-password",  kwargs={"username": "Test"}), data=data)
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.data["detail"], "NOT ALLOWED")
+        
+    
+    def test_change_password_wrong_password(self):
+        self.authenticate_user()
+
+        data = {
+            "old_password" : "password1",
+            "password": "testpassword1",
+            "password2": "testpassword1"
+        }
+
+        response = self.client.put(reverse("change-password",  kwargs={"username": "Test"}), data=data)
+        print(response.data["old_password"]["old_password"])
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data["old_password"]["old_password"], "Old password is not correct")
 
 
 
